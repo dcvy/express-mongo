@@ -2,11 +2,9 @@ import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import helmet from "helmet";
-import userRoutes from "./routes/user.route";
-import authRoutes from "./routes/auth.route";
-import { requestLogger } from "./middlewares/logger.middleware";
-import { errorHandler } from "./middlewares/error.middleware";
-import { verifyToken } from "./middlewares/auth.middleware";
+import setupRoutes from "./routes";
+import { requestLogger } from "./utils/middlewares/logger.middleware";
+import { errorHandler } from "./utils/middlewares/error.middleware";
 
 dotenv.config();
 
@@ -27,8 +25,7 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB Atlas"))
   .catch((err) => console.error("❌ MongoDB Connection Error:", err));
 
-app.use("/auth", authRoutes);
-app.use("/users", userRoutes);
+setupRoutes(app);
 
 app.use(errorHandler);
 
