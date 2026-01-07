@@ -8,8 +8,6 @@ export const errorHandler = (
 ) => {
   const statusCode = err.statusCode || 500;
 
-  console.error("Lỗi: ${err.message}");
-
   res.status(statusCode).json({
     success: false,
     message: err.message || "Lỗi hệ thống nội bộ",
