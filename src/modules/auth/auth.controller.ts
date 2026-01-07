@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { User } from "../users/user.interface";
+import { User } from "../users/user.collection";
 export class AuthController {
   static async login(req: Request, res: Response, next: NextFunction) {
     try {

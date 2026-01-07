@@ -1,9 +1,9 @@
 import {
-  Category,
   ICategory,
   ICreateCategoryDTO,
   IUpdateCategoryDTO,
 } from "./category.interface";
+import { Category } from "./category.collection";
 
 export class CategoryService {
   static async getAll(): Promise<ICategory[]> {

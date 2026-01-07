@@ -1,7 +1,7 @@
-import { Schema, model, Types } from "mongoose";
+import { Types } from "mongoose";
 
 export interface IPost {
-  id?: string;
+  id?: Types.ObjectId;
   title: string;
   content: string;
   author: Types.ObjectId | string;
@@ -26,19 +26,3 @@ export interface IUpdatePostDTO {
   category?: Types.ObjectId;
   averageRating?: number;
 }
-
-const postSchema = new Schema<IPost>(
-  {
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    author: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
-    averageRating: { type: Number, default: 0 },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
-);
-
-export const Post = model<IPost>("Post", postSchema);

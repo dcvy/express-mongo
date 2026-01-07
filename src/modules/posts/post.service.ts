@@ -1,5 +1,5 @@
-import { Post, IPost, ICreatePostDTO, IUpdatePostDTO } from "./post.interface";
-
+import { IPost, ICreatePostDTO, IUpdatePostDTO } from "./post.interface";
+import { Post } from "./post.collection";
 export class PostService {
   static async getAllPosts(): Promise<IPost[]> {
     return await Post.find()

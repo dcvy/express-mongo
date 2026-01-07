@@ -1,4 +1,5 @@
-import { User, IUser, ICreateUserDTO, IUpdateUserDTO } from "./user.interface";
+import { IUser, ICreateUserDTO, IUpdateUserDTO } from "./user.interface";
+import { User } from "./user.collection";
 
 export class UserService {
   static async getAllUsers(): Promise<IUser[]> {

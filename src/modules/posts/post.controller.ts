@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { PostService } from "./post.service";
-import { Category } from "../categories/category.interface";
+import { Category } from "../categories/category.collection";
 
 export class PostController {
   static async getPosts(req: Request, res: Response, next: NextFunction) {

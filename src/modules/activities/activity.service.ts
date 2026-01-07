@@ -1,5 +1,6 @@
-import { Activity, IActivity } from "./activity.interface";
-import { Post } from "../posts/post.interface";
+import { IActivity } from "./activity.interface";
+import { Activity } from "./activity.collection";
+import { Post } from "../posts/post.collection";
 import { Types } from "mongoose";
 
 export class ActivityService {
