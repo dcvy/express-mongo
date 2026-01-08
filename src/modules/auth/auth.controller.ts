@@ -1,7 +1,12 @@
 import { Request, Response, NextFunction } from "express";
+import path from "path";
 import jwt from "jsonwebtoken";
 import { User } from "../users/user.collection";
 export class AuthController {
+  static renderLoginPage(req: Request, res: Response) {
+    res.sendFile(path.join(process.cwd(), "/src/public/pages/login.html"));
+  }
+
   static async login(req: Request, res: Response, next: NextFunction) {
     try {
       const { name } = req.body;
@@ -15,7 +20,7 @@ export class AuthController {
       let user = await User.findOne({ name });
 
       if (!user) {
-        user = await User.create({ name });
+        return res.status(400).json({ message: "Không tìm thấy user" });
       }
 
       const JWT_SECRET = process.env.JWT_SECRET || "default_secret";
@@ -34,6 +39,14 @@ export class AuthController {
         message: "Đăng nhập thành công!",
         token,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.status(200).json({ success: true, message: "Đã đăng xuất" });
     } catch (error) {
       next(error);
     }

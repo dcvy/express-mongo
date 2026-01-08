@@ -58,6 +58,8 @@ setupRoutes(app);
 
 app.use(errorHandler);
 
+app.use(express.static(path.join(process.cwd(), "/src/public")));
+
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server is running at http://localhost:${PORT}`);

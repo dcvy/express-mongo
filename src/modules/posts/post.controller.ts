@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { PostService } from "./post.service";
 import { Category } from "../categories/category.collection";
+import path from "path";
 
 export class PostController {
+  static renderPostPage(req: Request, res: Response) {
+    res.sendFile(path.join(process.cwd(), "/src/public/pages/post.html"));
+  }
   static async getPosts(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await PostService.getAllPosts();

@@ -6,6 +6,7 @@ import categoryRoutes from "./modules/categories/category.routes";
 import activityRoutes from "./modules/activities/activity.routes";
 
 export default (app: Application): void => {
+  app.get("/", (req, res) => res.redirect("/be/login"));
   authRoutes(app);
   userRoutes(app);
   postRoutes(app);

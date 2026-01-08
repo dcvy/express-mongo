@@ -7,6 +7,7 @@ export interface IPost {
   author: Types.ObjectId | string;
   category: Types.ObjectId | string;
   averageRating?: number;
+  activities?: Types.ObjectId[] | any[];
   createdAt?: string;
   updatedAt?: string;
 }

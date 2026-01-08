@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BE Panel - Real-time Posts & Activities</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-new-comment {
+            animation: slideIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+    <div id="navbar-placeholder"></div>
+
+    <main class="max-w-5xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 sticky top-6">
+                <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center">
+                    <span class="w-2 h-6 bg-blue-600 rounded-full mr-3"></span>
+                    Tạo bài mới
+                </h2>
+                <div class="space-y-4">
+                    <input id="title" type="text" placeholder="Tiêu đề..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <select id="category-select" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"></select>
+                    <textarea id="content" rows="4" placeholder="Nội dung..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all"></textarea>
+                    <button onclick="createPost()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95">ĐĂNG BÀI</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-2">
+            <h2 class="text-2xl font-extrabold text-slate-800 mb-6 tracking-tight">Bảng tin bài viết</h2>
+            <div id="postList" class="space-y-8"></div>
+        </div>
+    </main>
+
+    <script>
+        const socket = io();
+
+        // Lắng nghe Socket.io để cập nhật real-time cho các user khác
+        socket.on("NEW_COMMENT_EVENT", (data) => {
+            // Lưu ý: Controller của bạn cần trả về postId trong sự kiện này
+            if (data.postId) {
+                appendCommentToUI(data.postId, {
+                    author: { name: data.author },
+                    content: data.content,
+                    rating: data.rating
+                });
+                // Cập nhật rating trung bình nếu có
+                const avgEl = document.getElementById(`avg-rating-${data.postId}`);
+                if (avgEl && data.avgRating) avgEl.innerText = `⭐ ${data.avgRating.toFixed(1)}`;
+            }
+        });
+
+        let categoriesCache = [];
+
+        async function initPage() {
+            // Load Navbar
+            const resp = await fetch('/pages/components/navbar.html');
+            const placeholder = document.getElementById('navbar-placeholder');
+            placeholder.innerHTML = await resp.text();
+            placeholder.querySelectorAll("script").forEach(s => {
+                const newS = document.createElement("script");
+                newS.text = s.text;
+                document.body.appendChild(newS);
+            });
+
+            await fetchCategories();
+            loadPosts();
+        }
+
+        async function fetchCategories() {
+            const token = localStorage.getItem('jwt-token');
+            const res = await fetch('/categories', { headers: { 'Authorization': `Bearer ${token}` } });
+            const result = await res.json();
+            if (result.success) {
+                categoriesCache = result.data;
+                document.getElementById('category-select').innerHTML = '<option value="">Chọn danh mục...</option>' + 
+                    categoriesCache.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+            }
+        }
+
+        function parseJwt(token) {
+            try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; }
+        }
+
+        // --- HELPER RENDER COMMENT ---
+        function createCommentHTML(act) {
+            const stars = '★'.repeat(act.rating) + '☆'.repeat(5 - act.rating);
+            return `
+                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 text-sm animate-new-comment">
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="font-bold text-blue-600 text-[10px]">${act.author?.name || 'User'}</span>
+                        <span class="text-yellow-500 text-[10px] font-bold">${stars}</span>
+                    </div>
+                    <p class="text-slate-600 text-[11px] leading-snug">${act.content}</p>
+                </div>
+            `;
+        }
+
+        function appendCommentToUI(postId, actData) {
+            const container = document.getElementById(`comment-list-${postId}`);
+            const countEl = document.getElementById(`comment-count-${postId}`);
+            if (!container) return;
+
+            // Xóa dòng "Chưa có bình luận" nếu có
+            const emptyMsg = container.querySelector('.no-comments');
+            if (emptyMsg) emptyMsg.remove();
+
+            // Chèn HTML mới vào đầu danh sách
+            container.insertAdjacentHTML('afterbegin', createCommentHTML(actData));
+            
+            // Cập nhật số lượng hiển thị
+            if (countEl) countEl.innerText = parseInt(countEl.innerText) + 1;
+        }
+
+        // --- LOAD POSTS ---
+        async function loadPosts() {
+            const token = localStorage.getItem('jwt-token');
+            const currentUser = parseJwt(token);
+            const list = document.getElementById('postList');
+
+            const res = await fetch('/posts', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' }
+            });
+            const result = await res.json();
+
+            if (result.success) {
+                list.innerHTML = result.data.map(post => {
+                    const isOwner = currentUser && (post.author?._id === currentUser.id || post.author === currentUser.id);
+                    const commentsHtml = post.activities && post.activities.length > 0 
+                        ? post.activities.map(act => createCommentHTML(act)).reverse().join('')
+                        : `<p class="no-comments text-[10px] text-slate-300 italic text-center py-2">Chưa có bình luận nào.</p>`;
+
+                    return `
+                        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">${post.category?.name || "Chung"}</span>
+                                        <span id="avg-rating-${post._id}" class="text-yellow-500 font-bold text-xs ml-1">⭐ ${post.averageRating?.toFixed(1) || 0}</span>
+                                    </div>
+                                    <h3 class="text-xl font-bold text-slate-800">${post.title}</h3>
+                                </div>
+                                ${isOwner ? `<button onclick="deletePost('${post._id}')" class="text-red-400 hover:text-red-600 text-xs font-bold">Xóa</button>` : ''}
+                            </div>
+                            <p class="text-slate-600 mb-6 leading-relaxed">${post.content}</p>
+                            
+                            <div class="mt-4 pt-4 border-t border-slate-50">
+                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                                    Hoạt động (<span id="comment-count-${post._id}">${post.activities?.length || 0}</span>)
+                                </h4>
+                                <div id="comment-list-${post._id}" class="space-y-2 mb-4">
+                                    ${commentsHtml}
+                                </div>
+
+                                <div class="bg-slate-50 p-3 rounded-2xl flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <select id="rating-${post._id}" class="text-[10px] border-none rounded-lg px-2 py-1 bg-white outline-none font-bold text-slate-500">
+                                            <option value="5">5 ★ Đỉnh cao</option><option value="4">4 ★ Tốt</option><option value="3">3 ★ Tạm</option><option value="2">2 ★ Tệ</option><option value="1">1 ★ Rất tệ</option>
+                                        </select>
+                                        <button onclick="sendActivity('${post._id}')" class="text-[10px] bg-blue-600 text-white px-4 py-1.5 rounded-xl font-bold">Gửi</button>
+                                    </div>
+                                    <input id="act-content-${post._id}" type="text" placeholder="Để lại ý kiến..." class="w-full px-3 py-2 text-xs border-none bg-white rounded-xl outline-none focus:ring-2 focus:ring-blue-400">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).reverse().join('');
+            }
+        }
+
+        // --- SEND ACTIVITY ---
+        async function sendActivity(postId) {
+            const token = localStorage.getItem('jwt-token');
+            const currentUser = parseJwt(token);
+            const contentInput = document.getElementById(`act-content-${postId}`);
+            const ratingSelect = document.getElementById(`rating-${postId}`);
+
+            const content = contentInput.value.trim();
+            if (!content) return;
+
+            try {
+                const res = await fetch('/activities', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ postId, content, rating: Number(ratingSelect.value) })
+                });
+
+                const result = await res.json();
+                if (result.success) {
+                    // HIỂN THỊ NGAY LẬP TỨC CHO NGƯỜI GỬI
+                    appendCommentToUI(postId, {
+                        author: { name: "Bạn vừa xong" },
+                        content: content,
+                        rating: Number(ratingSelect.value)
+                    });
+                    contentInput.value = '';
+                }
+            } catch (e) { alert("Lỗi gửi bình luận"); }
+        }
+
+        async function createPost() {
+            const token = localStorage.getItem('jwt-token');
+            const title = document.getElementById('title').value;
+            const content = document.getElementById('content').value;
+            const category = document.getElementById('category-select').value;
+            if(!title || !content || !category) return alert("Điền đủ thông tin!");
+
+            const res = await fetch('/posts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ title, content, category })
+            });
+            if (res.ok) {
+                document.getElementById('title').value = '';
+                document.getElementById('content').value = '';
+                loadPosts();
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm("Xóa bài viết?")) return;
+            await fetch(`/posts/${postId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('jwt-token')}` } });
+            loadPosts();
+        }
+
+        initPage();
+    </script>
+</body>
+</html>

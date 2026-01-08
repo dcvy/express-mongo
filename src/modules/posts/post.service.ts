@@ -5,6 +5,10 @@ export class PostService {
     return await Post.find()
       .populate("author", "name email")
       .populate("category", "name")
+      .populate({
+        path: "activities",
+        populate: { path: "author", select: "name" },
+      })
       .lean();
   }
 
