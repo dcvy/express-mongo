@@ -1,7 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { CategoryService } from "./category.service";
+import path from "path";
 
 export class CategoryController {
+  static renderCategoryPage(req: Request, res: Response) {
+    res.sendFile(path.join(process.cwd(), "/src/public/pages/category.html"));
+  }
   static async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const data = await CategoryService.getAll();

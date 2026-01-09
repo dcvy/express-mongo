@@ -1,33 +1,33 @@
-<nav class="bg-slate-800 text-white shadow-lg px-6 py-4 mb-6">
-    <div class="max-w-5xl mx-auto flex justify-between items-center">
-        <div class="flex items-center space-x-2">
-            <span class="text-2xl font-bold tracking-tight text-blue-400">BE Panel</span>
-        </div>
-        <div class="flex items-center gap-6">
-            <div class="text-right">
-                <p class="text-[10px] text-slate-400 uppercase leading-none">Người dùng</p>
-                <p id="navUsername" class="font-semibold text-blue-300 leading-tight">Đang tải...</p>
-            </div>
-            <button onclick="window.handleLogout()" class="bg-slate-700 hover:bg-red-600 px-4 py-2 rounded-lg text-sm transition-all shadow-md">
-                Đăng xuất
-            </button>
-        </div>
-    </div>
-</nav>
+<div id="navbar-root"></div>
 
-<script>
-    (function() {
-        const token = localStorage.getItem('jwt-token');
-        console.log("🚀 ~ token:", token)
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-        // 1. Kiểm tra Token ngay lập tức
-        if (!token) {
-            window.location.href = '/be/login';
-            return;
-        }
+<script type="text/babel">
+    const { useState, useEffect } = React;
 
-        // 2. Hàm Decode JWT nội bộ
-        function parseJwt(token) {
+    function Navbar() {
+        const [username, setUsername] = useState("Đang tải...");
+
+        useEffect(() => {
+            const token = localStorage.getItem('jwt-token');
+            
+            if (!token) {
+                window.location.href = '/be/login';
+                return;
+            }
+
+            const userData = parseJwt(token);
+            if (userData && userData.name) {
+                setUsername(userData.name);
+            } else {
+                localStorage.removeItem('jwt-token');
+                window.location.href = '/be/login';
+            }
+        }, []);
+
+        const parseJwt = (token) => {
             try {
                 const base64Url = token.split('.')[1];
                 const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -35,23 +35,42 @@
             } catch (e) {
                 return null;
             }
-        }
+        };
 
-        // 3. Hiển thị thông tin
-        const userData = parseJwt(token);
-        console.log("🚀 ~ userData.name:", userData.name)
-        if (userData && userData.name) {
-            document.getElementById('navUsername').innerText = userData.name;
-        } else {
-            // Token hỏng hoặc hết hạn
-            localStorage.removeItem('jwt-token');
-            window.location.href = '/be/login';
-        }
-
-        // 4. Đưa hàm logout ra phạm vi toàn cục để nút button gọi được
-        window.handleLogout = function() {
+        const handleLogout = () => {
             localStorage.removeItem('jwt-token');
             window.location.href = '/be/login';
         };
-    })();
+
+        return (
+            <nav className="bg-slate-800 text-white shadow-lg px-6 py-4 mb-6">
+                <div className="max-w-5xl mx-auto flex justify-between items-center">
+                    <div 
+                        className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => window.location.href = '/be/posts'}
+                    >
+                        <span className="text-2xl font-bold tracking-tight text-blue-400">BE Panel</span>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                        <div className="text-right">
+                            <p className="text-[10px] text-slate-400 uppercase leading-none">Người dùng</p>
+                            <p className="font-semibold text-blue-300 leading-tight">
+                                {username}
+                            </p>
+                        </div>
+                        <button 
+                            onClick={handleLogout}
+                            className="bg-slate-700 hover:bg-red-600 px-4 py-2 rounded-lg text-sm transition-all shadow-md active:scale-95"
+                        >
+                            Đăng xuất
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('navbar-root'));
+    root.render(<Navbar />);
 </script>

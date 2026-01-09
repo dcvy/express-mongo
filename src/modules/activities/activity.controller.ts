@@ -16,6 +16,7 @@ export class ActivityController {
 
       const io = req.app.get("io");
       io.to(postId).emit("NEW_COMMENT_EVENT", {
+        postId: postId,
         content: result.newActivity.content,
         rating: result.newActivity.rating,
         author: req.user.name,

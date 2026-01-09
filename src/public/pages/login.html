@@ -54,9 +54,7 @@
                 const result = await res.json();
 
                 if (result.success) {
-                    // Lưu JWT Token
                     localStorage.setItem('jwt-token', result.token);
-                    // Chuyển hướng đến trang Post (dùng đường dẫn tuyệt đối)
                     window.location.href = '/be/posts';
                 } else {
                     showError(result.message || "Đăng nhập thất bại");
